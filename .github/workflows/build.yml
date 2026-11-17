@@ -1,0 +1,48 @@
+name: Build Windows exe
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt pyinstaller
+      - name: Build
+        shell: cmd
+        run: >
+          pyinstaller --noconfirm --clean --onefile --windowed --name Ghostpin --icon icon.ico
+          --add-data "web;web" --hidden-import engine --hidden-import classic
+          --collect-all pymobiledevice3 --collect-all developer_disk_image --collect-all pmd_pytcp
+          --collect-all pmd_net_addr --collect-all pmd_net_proto --collect-all webview
+          --collect-submodules qh3 --collect-all opack2 --collect-all pyimg4
+          --collect-all pytun_pmd3 --collect-all sslpsk_pmd3
+          --exclude-module matplotlib --exclude-module tkinter --exclude-module PyQt5 --exclude-module PyQt6
+          ghostpin.py
+      - name: Self-test
+        shell: pwsh
+        run: |
+          $p = Start-Process .\dist\Ghostpin.exe -ArgumentList "--selftest" -Wait -PassThru
+          Get-Content "$env:APPDATA\Ghostpin\selftest.txt"
+          exit $p.ExitCode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ghostpin
+          path: dist/Ghostpin.exe
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/Ghostpin.exe

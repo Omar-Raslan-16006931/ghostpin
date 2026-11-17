@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghostpin</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app" class="booting">
+
+  <!-- map fills the window -->
+  <div id="map"></div>
+
+  <!-- ================= top bar ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 24 24"><path d="M12 2.5c-3.9 0-7 3.1-7 7v9.4c0 .6.7.9 1.1.5l1.5-1.3 1.8 1.6c.3.3.8.3 1.1 0L12 18.1l1.5 1.6c.3.3.8.3 1.1 0l1.8-1.6 1.5 1.3c.4.4 1.1.1 1.1-.5V9.5c0-3.9-3.1-7-7-7z"/><circle class="eye" cx="9.6" cy="10" r="1.25"/><circle class="eye" cx="14.4" cy="10" r="1.25"/><ellipse class="shadow" cx="12" cy="22.6" rx="3.6" ry=".8"/></svg>
+      <span>Ghostpin</span>
+    </div>
+
+    <div class="search" id="search">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="searchInput" placeholder="Search a place, paste coordinates or a Google Maps link…" autocomplete="off" spellcheck="false">
+      <kbd>Ctrl K</kbd>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="top-actions">
+      <button class="device-pill" id="devicePill" title="iPhone connection">
+        <span class="dot"></span>
+        <svg class="ic" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+        <span class="label" id="deviceLabel">No iPhone</span>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="Settings">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= side panel ================= -->
+  <aside class="panel" id="panel">
+    <nav class="tabs" id="tabs">
+      <button data-tab="teleport" class="active">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+        <span>Teleport</span>
+      </button>
+      <button data-tab="drive">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M4 16h16M5.5 16l1.7-5.4A2 2 0 0 1 9.1 9h5.8a2 2 0 0 1 1.9 1.6L18.5 16"/><path d="M4 16v3M20 16v3M7.5 13h.01M16.5 13h.01"/></svg>
+        <span>Drive</span>
+      </button>
+      <button data-tab="joystick">
+        <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>
+        <span>Joystick</span>
+      </button>
+      <button data-tab="saved">
+        <svg class="ic" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+        <span>Places</span>
+      </button>
+      <i class="tab-ink" id="tabInk"></i>
+    </nav>
+
+    <div class="tab-body">
+
+      <!-- ---------- TELEPORT ---------- -->
+      <section class="pane active" data-pane="teleport">
+        <p class="hint">Click anywhere on the map, search above, or pick a saved place. Then send it to your iPhone.</p>
+
+        <div class="card coord-card">
+          <div class="coord-head">
+            <span class="eyebrow">Selected location</span>
+            <div class="mini-actions">
+              <button class="ghost-ic" id="btnCopyCoords" title="Copy coordinates"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg></button>
+              <button class="ghost-ic" id="btnFav" title="Save to places"><svg class="ic" viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg></button>
+            </div>
+          </div>
+          <div class="address" id="pinAddress">Nothing selected yet</div>
+          <div class="coord-grid">
+            <label><span>Latitude</span><input id="inLat" inputmode="decimal" placeholder="24.713600"></label>
+            <label><span>Longitude</span><input id="inLon" inputmode="decimal" placeholder="46.675300"></label>
+          </div>
+        </div>
+
+        <div class="section-title">Quick jump</div>
+        <div class="chips" id="quickPresets"></div>
+
+        <div class="pane-foot">
+          <div class="coord-live"><span>iPhone location</span><b id="liveCoord">Not set</b></div>
+          <button class="cta" id="btnTeleport">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg>
+            <span>Teleport iPhone here</span>
+          </button>
+          <div class="row-2">
+            <button class="btn" id="btnLocateMe">
+              <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              <span>Go to iPhone</span>
+            </button>
+            <button class="btn danger" id="btnRestore">
+              <svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Real GPS</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- DRIVE ---------- -->
+      <section class="pane" data-pane="drive">
+        <div class="seg" id="routeType">
+          <button data-v="road" class="on">Follow roads</button>
+          <button data-v="line">Straight lines</button>
+        </div>
+
+        <div class="stops" id="stops"></div>
+        <div class="stop-tools">
+          <button class="link" id="btnStopFromPos">
+            <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>Start from current
+          </button>
+          <button class="link" id="btnReverse">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16M7 4 3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/></svg>Reverse
+          </button>
+          <button class="link" id="btnClearStops">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Clear
+          </button>
+        </div>
+        <p class="hint small" id="stopHint">Click the map to add a start, stops and a destination. Drag pins to adjust.</p>
+
+        <div class="route-summary" id="routeSummary" hidden>
+          <div><b id="rsDist">–</b><span>distance</span></div>
+          <div><b id="rsTime">–</b><span>at your speed</span></div>
+          <div id="rsAltBox" hidden><b id="rsAlt">1</b><span>route — click grey line to switch</span></div>
+        </div>
+
+        <div class="section-title">Speed</div>
+        <div class="profiles" id="profiles">
+          <button data-p="walk"><svg class="ic" viewBox="0 0 24 24"><circle cx="13" cy="4" r="1.8"/><path d="m9 21 2.5-6.5L14 17v4M7 12l3-4h4l2.5 4 2.5 1M11.5 14.5 12 8"/></svg><span>Walk</span></button>
+          <button data-p="run"><svg class="ic" viewBox="0 0 24 24"><circle cx="15" cy="4" r="1.8"/><path d="M5 21l4-5 3 1 1-5-3-2-3 3M13 12l3 3h4M10 10l3-3 4 2"/></svg><span>Run</span></button>
+          <button data-p="bike"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9 8.5 6H6M13 16l-3-7"/></svg><span>Bike</span></button>
+          <button data-p="car" class="on"><svg class="ic" viewBox="0 0 24 24"><path d="M4 16h16M5.5 16l1.7-5.4A2 2 0 0 1 9.1 9h5.8a2 2 0 0 1 1.9 1.6L18.5 16"/><path d="M4 16v3M20 16v3"/></svg><span>Car</span></button>
+          <button data-p="highway"><svg class="ic" viewBox="0 0 24 24"><path d="M4 21 9 3M20 21 15 3M12 4v2M12 10v3M12 17v3"/></svg><span>Highway</span></button>
+        </div>
+        <div class="slider-row">
+          <input type="range" id="speed" min="1" max="250" value="50">
+          <output id="speedOut">50 km/h</output>
+        </div>
+
+        <div class="section-title">Behaviour</div>
+        <div class="seg small" id="loopMode">
+          <button data-v="off" class="on">Once</button>
+          <button data-v="loop">Loop</button>
+          <button data-v="pingpong">Back &amp; forth</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="optRealistic" checked><i></i><span>Realistic driving<small>Accelerate, brake for turns, natural speed changes</small></span></label>
+        <div class="slider-row compact">
+          <span class="lbl">Speed variation</span>
+          <input type="range" id="variance" min="0" max="30" value="8">
+          <output id="varianceOut">±8%</output>
+        </div>
+
+        <div class="pane-foot"><div class="drive-actions">
+          <button class="cta" id="btnDrive">
+            <svg class="ic" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg><span>Start driving</span>
+          </button>
+          <button class="btn sq" id="btnImportGpx" title="Import GPX"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+          <button class="btn sq" id="btnExportGpx" title="Export route as GPX"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg></button>
+        </div></div>
+      </section>
+
+      <!-- ---------- JOYSTICK ---------- -->
+      <section class="pane" data-pane="joystick">
+        <p class="hint">Walk or drive freely. Drag the stick or use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrow keys. Hold <kbd>Shift</kbd> for 2× speed.</p>
+        <div class="joy-wrap">
+          <div class="joy" id="joy">
+            <svg class="joy-ring" viewBox="0 0 200 200"><circle cx="100" cy="100" r="92"/><path d="M100 18v14M100 168v14M18 100h14M168 100h14"/></svg>
+            <div class="joy-knob" id="joyKnob"></div>
+            <span class="joy-n">N</span>
+          </div>
+        </div>
+        <div class="joy-readout">
+          <div><b id="joySpeed">0</b><span>km/h</span></div>
+          <div><b id="joyHeading">–</b><span>heading</span></div>
+          <div><b id="joyOdo">0 m</b><span>travelled</span></div>
+        </div>
+        <div class="section-title">Speed</div>
+        <div class="profiles" id="joyProfiles">
+          <button data-p="walk" class="on"><span>Walk</span></button>
+          <button data-p="run"><span>Run</span></button>
+          <button data-p="bike"><span>Bike</span></button>
+          <button data-p="car"><span>Car</span></button>
+          <button data-p="highway"><span>Fast</span></button>
+        </div>
+        <p class="hint small">Joystick starts from your current simulated location. Teleport first if nothing is set.</p>
+      </section>
+
+      <!-- ---------- SAVED ---------- -->
+      <section class="pane" data-pane="saved">
+        <div class="seg" id="savedSeg">
+          <button data-v="fav" class="on">Saved</button>
+          <button data-v="presets">Presets</button>
+          <button data-v="history">Recent</button>
+        </div>
+        <div class="list" id="placeList"></div>
+      </section>
+
+    </div>
+  </aside>
+
+  <!-- ================= map controls ================= -->
+  <div class="map-ctrl">
+    <div class="ctrl-group">
+      <button class="icon-btn" id="btnZoomIn" title="Zoom in"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="icon-btn" id="btnZoomOut" title="Zoom out"><svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    </div>
+    <div class="ctrl-group">
+      <button class="icon-btn" id="btnLayers" title="Map style"><svg class="ic" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></button>
+      <button class="icon-btn" id="btnFollow" title="Follow position"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2 4.5 20.3l.7.7L12 18l6.8 3 .7-.7z"/></svg></button>
+    </div>
+    <div class="layer-menu" id="layerMenu">
+      <button data-style="dark">Dark</button>
+      <button data-style="light">Streets</button>
+      <button data-style="sat">Satellite</button>
+      <button data-style="hybrid">Hybrid</button>
+    </div>
+  </div>
+
+  <!-- ================= drive HUD ================= -->
+  <div class="hud" id="hud">
+    <div class="hud-speed">
+      <b id="hudSpeed">0</b><span id="hudUnit">km/h</span>
+    </div>
+    <div class="hud-mid">
+      <div class="hud-meta">
+        <span id="hudState">Driving</span>
+        <span><b id="hudRemain">–</b> left · ETA <b id="hudEta">–</b></span>
+      </div>
+      <div class="progress" id="progress"><i id="progressFill"></i><em id="progressKnob"></em></div>
+    </div>
+    <div class="hud-btns">
+      <button class="icon-btn" id="hudPause" title="Pause (Space)"><svg class="ic" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      <button class="icon-btn" id="hudStop" title="Stop"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
+    </div>
+  </div>
+
+  <!-- status strip -->
+  <footer class="statusbar">
+    <button class="link" id="btnLog"><svg class="ic" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Activity</button>
+    <span id="sbMode">Preview mode · not sent to an iPhone</span>
+    <span class="grow"></span>
+    <span class="mono" id="sbCursor"></span>
+  </footer>
+
+  <!-- activity drawer -->
+  <div class="drawer" id="logDrawer">
+    <div class="drawer-head"><b>Activity</b><button class="ghost-ic" id="btnLogClose"><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- device sheet -->
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="deviceSheet">
+    <div class="sheet-head">
+      <div>
+        <b>iPhone connection</b>
+        <span class="sub" id="devSub">USB · Apple developer location service</span>
+      </div>
+      <button class="ghost-ic" data-close><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="dev-status" id="devStatus">
+      <svg class="ic big" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+      <div><b id="devName">Not connected</b><span id="devMsg">Plug in your iPhone with a USB data cable.</span></div>
+    </div>
+    <div class="dev-list" id="devList"></div>
+    <div class="set-row"><span>Engine<small id="engineHint">Classic = same method as Ghostpin v1 (most compatible)</small></span>
+      <div class="seg small" id="setEngine"><button data-v="classic" class="on">Classic</button><button data-v="builtin">Fast</button></div></div>
+    <div class="row-2">
+      <button class="btn" id="btnScan"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/></svg><span>Scan</span></button>
+      <button class="cta slim" id="btnConnect"><span>Connect</span></button>
+    </div>
+    <button class="btn danger wide" id="btnDisconnect" hidden><span>Disconnect</span></button>
+
+    <details class="help">
+      <summary>First-time setup checklist</summary>
+      <ol>
+        <li>Install <b>Apple Devices</b> (Microsoft Store) or iTunes so Windows can talk to the iPhone.</li>
+        <li>Connect with a <b>data</b> cable, unlock the phone and tap <b>Trust</b>.</li>
+        <li>On the iPhone: <b>Settings › Privacy &amp; Security › Developer Mode</b> → On, then restart.</li>
+        <li>Click <b>Connect</b>. The first time, Ghostpin downloads Apple's developer disk image (needs internet).</li>
+        <li>If <b>Classic</b> fails, try <b>Fast</b> (smoother joystick). iOS 17.0 – 17.3 on Fast: click <b>Start admin tunnel</b>, approve, then Connect with "Use admin tunnel" on.</li>
+      </ol>
+    </details>
+    <div class="row-2">
+      <button class="btn" id="btnTunnel"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg><span>Start admin tunnel</span></button>
+      <label class="toggle inline"><input type="checkbox" id="optTunneld"><i></i><span>Use admin tunnel</span></label>
+    </div>
+  </div>
+
+  <!-- settings sheet -->
+  <div class="sheet" id="settingsSheet">
+    <div class="sheet-head">
+      <div><b>Settings</b><span class="sub" id="aboutLine">Ghostpin</span></div>
+      <button class="ghost-ic" data-close><svg class="ic" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="set-row"><span>Units</span>
+      <div class="seg small" id="setUnits"><button data-v="km" class="on">km</button><button data-v="mi">miles</button></div></div>
+    <div class="set-row"><span>Update rate<small>How often a new position is sent to the iPhone</small></span>
+      <div class="seg small" id="setInterval"><button data-v="0.5">0.5 s</button><button data-v="1" class="on">1 s</button><button data-v="2">2 s</button></div></div>
+    <div class="set-row"><span>Follow camera<small>Keep the map centred while moving</small></span>
+      <label class="toggle inline"><input type="checkbox" id="setFollow" checked><i></i></label></div>
+    <div class="set-row"><span>Confirm before teleporting far<small>Asks when a jump is over 50 km</small></span>
+      <label class="toggle inline"><input type="checkbox" id="setConfirm" checked><i></i></label></div>
+    <div class="set-row"><span>Restore real GPS on exit</span>
+      <label class="toggle inline"><input type="checkbox" id="setRestoreExit"><i></i></label></div>
+    <p class="hint small">Shortcuts: <kbd>Ctrl K</kbd> search · <kbd>T</kbd> teleport to pin · <kbd>Space</kbd> pause · <kbd>Esc</kbd> stop · <kbd>1–4</kbd> switch tabs</p>
+  </div>
+
+  <!-- confirm dialog -->
+  <div class="dialog" id="dialog">
+    <b id="dlgTitle">Are you sure?</b>
+    <p id="dlgText"></p>
+    <div class="row-2"><button class="btn" id="dlgNo">Cancel</button><button class="cta slim" id="dlgYes">Continue</button></div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <div class="splash" id="splash">
+    <svg class="logo" viewBox="0 0 24 24"><path d="M12 2.5c-3.9 0-7 3.1-7 7v9.4c0 .6.7.9 1.1.5l1.5-1.3 1.8 1.6c.3.3.8.3 1.1 0L12 18.1l1.5 1.6c.3.3.8.3 1.1 0l1.8-1.6 1.5 1.3c.4.4 1.1.1 1.1-.5V9.5c0-3.9-3.1-7-7-7z"/><circle class="eye" cx="9.6" cy="10" r="1.25"/><circle class="eye" cx="14.4" cy="10" r="1.25"/><ellipse class="shadow" cx="12" cy="22.6" rx="3.6" ry=".8"/></svg>
+    <b>Ghostpin</b>
+  </div>
+</div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
